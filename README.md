@@ -5,85 +5,164 @@
 - Pasaroiu Mihai-Octavian  
 
 ---
+## Overview
+**CarTechnical** is a proof-of-concept Java application that models a simplified **vehicle service management system**.  
+It demonstrates the integration and interaction of four core design patterns within an extensible architecture.
 
-## Problem Statement  
-The goal of this project is to develop a comprehensive **Vehicle Maintenance and Scheduling Management System** that integrates various components of the automotive service ecosystem to streamline maintenance processes, enhance customer experience, and ensure efficient data management. 
+The project focuses on design clarity and code maintainability, rather than full functionality. It includes:
+- A comprehensive UML class diagram covering the entire system  
+- Two detailed UML sequence diagrams illustrating key use cases  
+- Implementation of four design patterns in Java  
 
-The project aims to compare three architectural approaches — **monolithic**, **containerized**, and **microservices architectures** — evaluating them based on scalability, maintainability, and deployment flexibility. 
+## Implemented Design Patterns
 
-The system will connect **vehicle owners**, **mechanics**, and **garage administrators**, enabling seamless interaction and automation of key operations such as **vehicle registration**, **maintenance scheduling**, **service tracking**, **billing**, and **notifications**.  
+| Pattern | Purpose | Key Classes |
+|----------|----------|-------------|
+| **Builder** | Simplifies complex object creation for `User`, `Vehicle`, and `ServiceRequest` | `User`, `Vehicle`, `ServiceRequest` |
+| **Strategy** | Enables flexible scheduling strategies for selecting service requests | `SchedulingStrategy`, `PriorityBasedStrategy` |
+| **Observer** | Enables notification dispatch when a service request is updated or processed | `NotificationSubject`, `EmailNotifier`, `DashboardNotifier` |
+| **Singleton** | Ensures a single shared notification center instance | `NotificationSubject` |
 
-The application will emphasize **data consistency**, **asynchronous communication**, and **role-based access control** to ensure security and efficient collaboration among all system users.
 
----
+## System Design Summary
 
-## System Overview  
-- Create a distributed vehicle management platform integrating functionalities for owners, garages, and mechanics.  
-- Vehicle and service data will be securely stored, continuously updated, and shared across authorized users.  
-- Enable interoperability between subsystems (vehicle records, service requests, notifications).  
-- Demonstrate good software design principles through the integration of multiple design patterns and microservice-based modularization.
+### **Core Concept**
+Car owners submit service requests for their vehicles, which mechanics then schedule and process.  
+The system prioritizes these requests using the **Strategy pattern**, while updates trigger notifications via the **Observer** and **Singleton** patterns. Object creation uses the **Builder** pattern to enhance readability and flexibility.
 
----
 
-## Functionalities
+## UML Class Diagram
 
-### 1. Vehicle & Owner Records
-- Create, update, and retrieve vehicle records (make, model, VIN, mileage, last service date).  
-- Link multiple vehicles to a single owner profile.  
-- Implement authentication and authorization mechanisms to control access by role (Owner, Mechanic, Admin).  
-- Ensure secure and centralized management of all vehicle data.
+![](/class%20uml.png)
 
----
+### Diagram Highlights:
+- All classes are interconnected to show relationships among **models**, **strategies**, **observers**, and **singleton components**.  
+- Each design pattern is clearly annotated with UML **notes**, pointing to the relevant classes.  
+- The diagram emphasizes **pattern integration** rather than isolated subsystems.
 
-### 2. Appointment Scheduling
-- Develop a user-friendly interface for booking, rescheduling, or canceling service appointments.  
-- Enable real-time availability checking and conflict prevention for scheduled services.  
-- Provide automated notifications for booking confirmations, changes, and reminders.  
-- Support different types of maintenance services (inspection, repair, oil change, etc.).
+**Classes included:**
+- `User`, `Vehicle`, `ServiceRequest`, `Role`, `Priority`, `ServiceStatus`
+- `SchedulingStrategy`, `PriorityBasedStrategy`
+- `NotificationSubject`, `EmailNotifier`, `DashboardNotifier`
 
----
+## UML Sequence Diagrams
 
-### 3. Service Reporting & Maintenance History
-- Allow mechanics to generate detailed service reports, including performed tasks, used parts, and total cost.  
-- Maintain a comprehensive history of all completed services per vehicle.  
-- Enable filtering and searching by vehicle, date range, and mechanic.  
-- Ensure data accuracy and traceability for all maintenance activities.
+### **Sequence 1 – ServiceRequest**
+![](/Sequence1%20-%20ServiceRequest.jpeg)
 
----
+**Scenario:**  
+An owner submits a new service request for their vehicle.  
+- The system builds the request using the **Builder pattern**.  
+- The owner associates the request with their vehicle.  
+- The service request is recorded and marked as pending for further scheduling.
 
-### 4. Billing
-- Implement transparent billing functionalities, including invoice generation and payment tracking.  
-- Provide financial reporting capabilities for both car owners and garage owners.
-- Support future integration with external payment systems.
+### **Sequence 2 – ServiceReport**
+![](/Sequence2%20-%20ServiceReport.jpeg)
 
----
+**Scenario:**  
+A mechanic reviews pending service requests and completes a service report.  
+- The **Strategy pattern** determines which request to process next based on priority.  
+- Once completed, the **Observer pattern** notifies all registered observers (email and dashboard).  
+- The notification flow is managed through the **Singleton** notification dispatcher.
 
-## Design Patterns Used
 
-### 1. Factory Method
-- **Purpose:** Used for creating different types of `ServiceRequest` objects (e.g., maintenance, repair, inspection) depending on user input.  
-- **Problem Solved:** Without the factory, multiple conditional statements would be needed to handle request creation logic.  
-- **Advantages:** Enhances extensibility — new request types can be added easily without modifying existing code, ensuring adherence to the **Open-Closed Principle** and improving code maintainability.
+## Implementation Details
 
----
+### **1. Builder Pattern**
+Simplifies object construction for `User`, `Vehicle`, and `ServiceRequest`.
 
-### 2. Observer
-- **Purpose:** Implements a decoupled notification mechanism between system components, allowing the `NotificationService` to react to service or appointment updates.  
-- **Problem Solved:** Prevents tight coupling between core logic (appointments) and notification handling.  
-- **Advantages:** Promotes scalability by allowing multiple observers (email sender, dashboard notifier) to subscribe independently to system events.
+```java
+User owner = User.builder().name("John").email("john@test.com").role(Role.OWNER).build();
+Vehicle car = Vehicle.builder().make("Toyota").model("Corolla").year(2018).owner(owner).build();
+ServiceRequest req = ServiceRequest.builder()
+    .vehicle(car).owner(owner).priority(Priority.HIGH).status(ServiceStatus.PENDING).build();
+```
 
----
 
-### 3. Strategy
-- **Purpose:** Used for implementing flexible scheduling algorithms such as - **priority-based**, **earliest-available**, or **mechanic-specific** scheduling.  
-- **Problem Solved:** Hardcoding a single scheduling approach reduces flexibility and complicates future changes.  
-- **Advantages:** Allows dynamic selection of scheduling strategies at runtime, improving configurability and making the system adaptable to different garage policies or user preferences.
+### **2. Strategy Pattern**
 
----
+Defines interchangeable scheduling strategies for selecting the next service request.
 
-### 4. Singleton
-- **Purpose:** Ensures a single shared instance of key system components such as `DatabaseConnectionManager` or `NotificationDispatcher`.  
-- **Problem Solved:** Prevents creation of multiple conflicting instances that could cause inconsistent state or duplicate notifications.  
-- **Advantages:** Centralizes access to shared resources, improves performance, and maintains consistent configuration across the application.
+```java
+SchedulingStrategy strategy = new PriorityBasedStrategy();
+ServiceRequest nextRequest = strategy.schedule(pendingRequests);
+```
+Different strategies can be implemented (e.g., time-based, load-based) by extending SchedulingStrategy.
 
----
+### **3. Observer Pattern**
+
+Used for real-time notifications when a service request changes state.
+```java
+NotificationSubject subject = NotificationSubject.getInstance();
+subject.attach(new EmailNotifier());
+subject.attach(new DashboardNotifier());
+subject.notifyObservers(nextRequest);
+```
+
+Each observer reacts differently, e.g., sending an email or updating a dashboard.
+
+### **4. Singleton Pattern**
+
+Ensures a single instance of the notification dispatcher throughout the application.
+```java
+public class NotificationSubject {
+    private static NotificationSubject instance;
+    private List<Notifier> observers = new ArrayList<>();
+
+    private NotificationSubject() {}
+
+    public static synchronized NotificationSubject getInstance() {
+        if (instance == null) instance = new NotificationSubject();
+        return instance;
+    }
+}
+```
+
+## How the Patterns Work Together
+
+Builder creates rich domain objects (User, Vehicle, ServiceRequest).
+
+Strategy determines the optimal request to process next.
+
+Observer + Singleton manage centralized notifications for updates.
+
+Together, they form a modular and extensible system.
+
+## Proof of Concept (Main.java)
+
+The Main class demonstrates the integrated design patterns:
+
+Create User, Vehicle, and ServiceRequest objects via Builder
+
+Determine next request using Strategy
+
+Register and notify observers through a Singleton Observer system
+
+Example Output
+```
+===== CREATED OBJECTS =====
+Owner: John | john@test.com | OWNER
+Mechanic: Mike | mike@test.com | MECHANIC
+Vehicle: Toyota | Corolla | John
+Service Requests:
+  ID: 3 | Vehicle: Corolla | Priority: NORMAL | Requested From: 2025-11-04
+  ID: 1 | Vehicle: Corolla | Priority: HIGH | Requested From: 2025-11-03
+  ID: 2 | Vehicle: Corolla | Priority: LOW | Requested From: 2025-11-05
+
+===== NEXT SERVICE REQUEST BASED ON STRATEGY =====
+ID: 1 | Vehicle: Corolla | Priority: HIGH
+
+===== NOTIFICATIONS VIA SINGLETON DISPATCHER =====
+[EmailNotifier] Notification sent to mechanic: Mike
+[DashboardNotifier] Dashboard updated for request ID 1
+```
+
+## Conclusion
+
+This project demonstrates:
+
+  - Integration of four design patterns in a cohesive, real-world context
+  UML documentation showing pattern relationships
+  - Sequence diagrams depicting main use cases
+  - A proof-of-concept Java implementation showcasing the interaction of all patterns
+  - This fulfills the design and implementation requirements for a design-pattern-driven project in Java.
