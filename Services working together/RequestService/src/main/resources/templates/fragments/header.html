@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<body>
+<header th:fragment="header">
+    <nav class="nav-bar">
+        <div sec:authorize="hasRole('OWNER')">
+            <a th:href="@{/vehicles}">My Vehicles</a> |
+            <a th:href="@{/requests}">My Requests</a> |
+            <a th:href="@{/owner/dashboard}">Dashboard</a> |
+            <a th:href="@{/logout}">Logout</a>
+        </div>
+
+        <div sec:authorize="hasRole('MECHANIC')">
+            <a th:href="@{/mechanic/dashboard}">Dashboard</a> |
+            <a th:href="@{/reports}">Reports</a> |
+            <a th:href="@{/logout}">Logout</a>
+        </div>
+
+        <div sec:authorize="hasRole('ADMIN')">
+            <a th:href="@{/admin/dashboard}">Admin Dashboard</a> |
+            <a th:href="@{/requests}">Manage Requests</a> |
+            <a th:href="@{/logout}">Logout</a>
+        </div>
+    </nav>
+    <hr>
+</header>
+</body>
+</html>

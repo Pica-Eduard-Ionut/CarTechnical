@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <link rel="stylesheet" th:href="@{/css/style.css}">
+    <title>Create Request</title>
+</head>
+<body>
+<div th:replace="fragments/header :: header"></div>
+
+<h2>Create Service Request</h2>
+
+<form th:action="@{/requests/create}" method="post">
+    <label>Vehicle:</label>
+    <select name="vehicle.id" required>
+        <option th:each="v : ${vehicles}"
+                th:value="${v.id}"
+                th:text="${v.make + ' ' + v.model}"></option>
+    </select><br>
+
+    <label>Service Type:</label>
+    <select name="serviceType" required>
+        <option value="MAINTENANCE">Maintenance</option>
+        <option value="REPAIR">Repair</option>
+        <option value="INSPECTION">Inspection</option>
+    </select><br>
+
+    <label>Priority:</label>
+    <select name="priority" required>
+        <option value="LOW">Low</option>
+        <option value="NORMAL">Normal</option>
+        <option value="HIGH">High</option>
+    </select><br>
+
+    <label>Requested From:</label>
+    <input type="datetime-local" name="requestedFrom" required><br>
+
+    <label>Requested To:</label>
+    <input type="datetime-local" name="requestedTo" required><br>
+
+    <button type="submit">Submit</button>
+</form>
+
+<a href="/requests">Back to Requests</a>
+
+<div th:replace="fragments/footer :: footer"></div>
+</body>
+</html>

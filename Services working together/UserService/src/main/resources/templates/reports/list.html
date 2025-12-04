@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <link rel="stylesheet" th:href="@{/css/style.css}">
+    <title>Service Reports</title>
+</head>
+<body>
+<div th:replace="fragments/header :: header"></div>
+
+<h2>Service Reports</h2>
+
+<table border="1">
+    <thead>
+    <tr>
+        <th>ID</th>
+        <th>Request ID</th>
+        <th>Mechanic</th>
+        <th>Performed At</th>
+        <th>Parts Used</th>
+        <th>Summary</th>
+        <th>Total Cost</th>
+    </tr>
+    </thead>
+    <tbody>
+    <tr th:each="r : ${reports}">
+        <td th:text="${r.id}"></td>
+        <td th:text="${r.serviceRequest != null ? r.serviceRequest.id : 'N/A'}"></td>
+        <td th:text="${r.mechanic != null ? r.mechanic.name : 'Unassigned'}"></td>
+        <td th:text="${#temporals.format(r.performedAt, 'yyyy-MM-dd HH:mm')}"></td>
+        <td th:text="${r.partsUsed}"></td>
+        <td th:text="${r.summary}"></td>
+        <td th:text="${r.totalCost}"></td>
+    </tr>
+    </tbody>
+</table>
+
+<br>
+<a href="/mechanic/dashboard">⬅ Back to Dashboard</a>
+
+<div th:replace="fragments/footer :: footer"></div>
+</body>
+</html>

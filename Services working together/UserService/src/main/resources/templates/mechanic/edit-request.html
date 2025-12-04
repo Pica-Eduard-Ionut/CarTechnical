@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>Edit Service Request</title>
+</head>
+<body>
+<h2>Edit Service Request</h2>
+<form th:action="@{'/mechanic/request/edit/' + ${request.id}}" method="post">
+    <label>Mechanic Notes:</label>
+    <textarea name="mechanicNotes"
+              th:text="${request.report != null ? request.report.summary : ''}"></textarea>
+    <br><br>
+
+    <label>Parts Used:</label>
+    <input type="text" name="partsUsed"
+           th:value="${request.report != null ? request.report.partsUsed : ''}">
+    <br><br>
+
+    <label>Total Cost:</label>
+    <input type="number" name="totalCost" step="0.01" min="0"
+           th:value="${request.report != null ? request.report.totalCost : 0}">
+    <br><br>
+
+    <label>Status:</label>
+    <select name="status">
+        <option th:each="s : ${statuses}"
+                th:value="${s}"
+                th:text="${s}"
+                th:selected="${s} == ${request.status}"></option>
+    </select>
+    <br><br>
+
+    <button type="submit">Save</button>
+</form>
+
+</body>
+</html>

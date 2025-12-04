@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <link rel="stylesheet" th:href="@{/css/style.css}">
+    <title>Create Service Report</title>
+</head>
+<body>
+<div th:replace="fragments/header :: header"></div>
+
+<h2>Create Service Report</h2>
+
+<form th:action="@{/reports/create}" method="post">
+    <input type="hidden" th:name="requestId" th:value="${requestId}" />
+
+    <label>Work Description:</label><br>
+    <textarea name="description" rows="5" cols="50" required></textarea><br><br>
+
+    <label>Status:</label>
+    <select name="status" required>
+        <option value="IN_PROGRESS">In Progress</option>
+        <option value="COMPLETED">Completed</option>
+    </select><br><br>
+
+    <button type="submit">Save</button>
+</form>
+
+<a href="/reports">Back to Reports</a>
+
+<div th:replace="fragments/footer :: footer"></div>
+</body>
+</html>

@@ -1,0 +1,162 @@
+version: '3.8'
+
+services:
+  # MariaDB Database for UserService
+  user-db:
+    image: mariadb:10.11
+    container_name: user-db
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: userservice
+    ports:
+      - "3307:3306"
+    volumes:
+      - user-db-data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-proot"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - microservices-network
+
+  # MariaDB Database for RequestService
+  request-db:
+    image: mariadb:10.11
+    container_name: request-db
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: requestservice
+    ports:
+      - "3308:3306"
+    volumes:
+      - request-db-data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-proot"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - microservices-network
+
+  # MariaDB Database for NotificationService
+  notification-db:
+    image: mariadb:10.11
+    container_name: notification-db
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: notificationservice
+    ports:
+      - "3309:3306"
+    volumes:
+      - notification-db-data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-proot"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - microservices-network
+
+  # UserService
+  user-service:
+    build:
+      context: ./UserService
+      dockerfile: Dockerfile
+    container_name: user-service
+    ports:
+      - "8081:8081"
+    environment:
+      # Override database URL to use Docker service name
+      SPRING_DATASOURCE_URL: jdbc:mariadb://user-db:3306/userservice
+      SPRING_DATASOURCE_USERNAME: root
+      SPRING_DATASOURCE_PASSWORD: root
+      # Service URLs for inter-service communication
+      NOTIFICATION_SERVICE_URL: http://notification-service:8083
+    depends_on:
+      user-db:
+        condition: service_healthy
+    networks:
+      - microservices-network
+    healthcheck:
+      test: ["CMD-SHELL", "nc -z localhost 8081 || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # RequestService
+  request-service:
+    build:
+      context: ./RequestService
+      dockerfile: Dockerfile
+    container_name: request-service
+    ports:
+      - "8082:8082"
+    environment:
+      # Override database URL to use Docker service name
+      SPRING_DATASOURCE_URL: jdbc:mariadb://request-db:3306/requestservice
+      SPRING_DATASOURCE_USERNAME: root
+      SPRING_DATASOURCE_PASSWORD: root
+      # Service URLs for inter-service communication
+      USER_SERVICE_URL: http://user-service:8081
+      NOTIFICATION_SERVICE_URL: http://notification-service:8083
+    depends_on:
+      request-db:
+        condition: service_healthy
+      user-service:
+        condition: service_healthy
+    networks:
+      - microservices-network
+    healthcheck:
+      test: ["CMD-SHELL", "nc -z localhost 8082 || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # NotificationService
+  notification-service:
+    build:
+      context: ./NotificationService
+      dockerfile: Dockerfile
+    container_name: notification-service
+    ports:
+      - "8083:8083"
+    env_file:
+      - ./NotificationService/.env
+    environment:
+      # Override with Docker-specific values (these take precedence over .env file)
+      # Database Configuration (use Docker service names)
+      NOTIFICATION_DB_HOST: notification-db
+      DB_HOST: request-db
+      USER_DB_HOST: user-db
+      
+      # Microservices URLs (use Docker service names)
+      USER_SERVICE_URL: http://user-service:8081
+      REQUEST_SERVICE_URL: http://request-service:8082
+    depends_on:
+      notification-db:
+        condition: service_healthy
+      user-service:
+        condition: service_healthy
+      request-service:
+        condition: service_healthy
+    networks:
+      - microservices-network
+    healthcheck:
+      test: ["CMD-SHELL", "python -c 'import requests; requests.get(\"http://localhost:8083/health\")' || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+volumes:
+  user-db-data:
+  request-db-data:
+  notification-db-data:
+
+networks:
+  microservices-network:
+    driver: bridge
+
