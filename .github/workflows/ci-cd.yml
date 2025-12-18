@@ -21,12 +21,17 @@ jobs:
           distribution: 'temurin'
           cache: maven
 
+      - name: Make mvnw executable (UserService)
+        working-directory: ./Services working together/UserService
+        run: chmod +x mvnw || true
+
       - name: Run tests
         working-directory: ./Services working together/UserService
-        run: ./mvnw -B -ntp test
+        run: |
+          if [ -x ./mvnw ]; then ./mvnw -B -ntp test; else mvn -B -ntp test; fi
 
       - name: Generate test report
-        if: always()
+        if: ${{ always() && hashFiles('Services working together/UserService/target/surefire-reports/*.xml') != '' }}
         uses: dorny/test-reporter@v1
         with:
           name: UserService Tests
@@ -48,12 +53,17 @@ jobs:
           distribution: 'temurin'
           cache: maven
 
+      - name: Make mvnw executable (RequestService)
+        working-directory: ./Services working together/RequestService
+        run: chmod +x mvnw || true
+
       - name: Run tests
         working-directory: ./Services working together/RequestService
-        run: ./mvnw -B -ntp test
+        run: |
+          if [ -x ./mvnw ]; then ./mvnw -B -ntp test; else mvn -B -ntp test; fi
 
       - name: Generate test report
-        if: always()
+        if: ${{ always() && hashFiles('Services working together/RequestService/target/surefire-reports/*.xml') != '' }}
         uses: dorny/test-reporter@v1
         with:
           name: RequestService Tests
