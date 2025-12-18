@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <link rel="stylesheet" th:href="@{/css/style.css}">
+    <title>Assign Mechanic</title>
+</head>
+<body>
+<div th:replace="fragments/header :: header"></div>
+
+<h2>Assign Mechanic</h2>
+
+<form th:action="@{'/requests/assign/' + ${requestId}}" method="post">
+    <label for="mechanic">Select Mechanic:</label>
+    <select id="mechanic" name="mechanicId" required>
+        <option value="">-- Choose Mechanic --</option>
+        <option th:each="m : ${mechanics}"
+                th:value="${m.id}"
+                th:text="${m.name + ' (' + m.email + ')'}">
+        </option>
+    </select>
+    <br><br>
+    <button type="submit">Assign</button>
+</form>
+
+<a href="/requests">Back to Requests</a>
+
+<div th:replace="fragments/footer :: footer"></div>
+</body>
+</html>

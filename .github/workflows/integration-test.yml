@@ -1,0 +1,90 @@
+name: Docker Compose Test
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+
+jobs:
+  integration-test:
+    runs-on: ubuntu-latest
+    name: Integration Tests
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Create .env for NotificationService
+        run: |
+          cat > "Services working together/NotificationService/.env" << 'EOF'
+          SMTP_HOST=smtp.gmail.com
+          SMTP_PORT=587
+          SMTP_USERNAME=${{ secrets.SMTP_USERNAME }}
+          SMTP_PASSWORD=${{ secrets.SMTP_PASSWORD }}
+          SMTP_USE_TLS=true
+          SMTP_USE_SSL=false
+          FROM_EMAIL=${{ secrets.SMTP_USERNAME }}
+          PORT=8083
+          DEBUG=false
+          DB_HOST=request-db
+          DB_PORT=3306
+          DB_USER=root
+          DB_PASSWORD=root
+          DB_NAME=requestservice
+          NOTIFICATION_DB_HOST=notification-db
+          NOTIFICATION_DB_PORT=3306
+          NOTIFICATION_DB_USER=root
+          NOTIFICATION_DB_PASSWORD=root
+          NOTIFICATION_DB_NAME=notificationservice
+          USER_DB_HOST=user-db
+          USER_DB_PORT=3306
+          USER_DB_USER=root
+          USER_DB_PASSWORD=root
+          USER_DB_NAME=userservice
+          USER_SERVICE_URL=http://user-service:8081
+          REQUEST_SERVICE_URL=http://request-service:8082
+          RABBITMQ_HOST=rabbitmq
+          RABBITMQ_PORT=5672
+          RABBITMQ_USERNAME=guest
+          RABBITMQ_PASSWORD=guest
+          EOF
+
+      - name: Start services with Docker Compose
+        working-directory: ./Services working together
+        run: docker compose up -d --build
+
+      - name: Wait for services to be healthy
+        working-directory: ./Services working together
+        run: |
+          echo "Waiting for services to be healthy..."
+          timeout 240 bash -c 'until docker compose ps | grep -q "healthy"; do sleep 4; done'
+          sleep 10
+
+      - name: Check service health
+        run: |
+          echo "=== Docker Compose Services Status ==="
+          docker compose -f "Services working together/docker-compose.yml" ps
+          echo "\n=== Checking UserService ==="
+          curl -fsS http://localhost:8081/health || echo "UserService health check failed"
+          echo "\n=== Checking RequestService ==="
+          curl -fsS http://localhost:8082/health || echo "RequestService health check failed"
+          echo "\n=== Checking NotificationService ==="
+          curl -fsS http://localhost:8083/health || echo "NotificationService health check failed"
+
+      - name: Run integration tests (placeholder)
+        run: |
+          echo "Running integration tests..."
+          # Add curl/pytest/postman/newman tests here
+
+      - name: Show logs on failure
+        if: failure()
+        working-directory: ./Services working together
+        run: |
+          echo "=== UserService Logs ===" && docker compose logs --no-color user-service || true
+          echo "\n=== RequestService Logs ===" && docker compose logs --no-color request-service || true
+          echo "\n=== NotificationService Logs ===" && docker compose logs --no-color notification-service || true
+
+      - name: Cleanup
+        if: always()
+        working-directory: ./Services working together
+        run: docker compose down -v

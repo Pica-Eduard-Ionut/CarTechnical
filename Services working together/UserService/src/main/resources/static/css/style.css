@@ -1,0 +1,272 @@
+/* =========================
+   GLOBAL LAYOUT & COLORS
+   ========================= */
+
+:root {
+    --primary-color: #2b6cb0;     /* Deep blue */
+    --primary-light: #3182ce;
+    --accent-color: #38b2ac;      /* Teal accent */
+    --danger-color: #e53e3e;
+    --success-color: #48bb78;
+    --background-color: #f7fafc;
+    --card-bg: #ffffff;
+    --text-color: #2d3748;
+    --border-color: #e2e8f0;
+    --shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    --radius: 8px;
+    --transition: all 0.2s ease-in-out;
+}
+
+* {
+    box-sizing: border-box;
+    font-family: "Segoe UI", Roboto, Arial, sans-serif;
+    color: var(--text-color);
+    margin: 0;
+    padding: 0;
+}
+
+body {
+    background-color: var(--background-color);
+    padding: 20px;
+    line-height: 1.6;
+}
+
+/* =========================
+   HEADER & FOOTER
+   ========================= */
+
+header nav {
+    background-color: var(--primary-color);
+    padding: 12px 20px;
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+}
+
+header nav a {
+    color: #ffffff;
+    text-decoration: none;
+    margin-right: 16px;
+    font-weight: 500;
+    transition: var(--transition);
+}
+
+header nav a:hover {
+    color: var(--accent-color);
+}
+
+footer {
+    margin-top: 40px;
+    text-align: center;
+    color: #718096;
+    border-top: 1px solid var(--border-color);
+    padding-top: 15px;
+    font-size: 0.9em;
+}
+
+/* =========================
+   HEADINGS
+   ========================= */
+
+h2, h3 {
+    color: var(--primary-color);
+    margin-bottom: 15px;
+}
+
+h2 {
+    border-bottom: 2px solid var(--primary-light);
+    padding-bottom: 5px;
+}
+
+/* =========================
+   TABLES
+   ========================= */
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+    background-color: var(--card-bg);
+    box-shadow: var(--shadow);
+    border-radius: var(--radius);
+    overflow: hidden;
+    margin-top: 15px;
+}
+
+th, td {
+    padding: 12px 15px;
+    border-bottom: 1px solid var(--border-color);
+    text-align: left;
+}
+
+th {
+    background-color: var(--primary-color);
+    color: white;
+    font-weight: 600;
+}
+
+tr:hover {
+    background-color: #edf2f7;
+}
+
+table a {
+    color: var(--primary-light);
+    text-decoration: none;
+    font-weight: 500;
+}
+
+table a:hover {
+    text-decoration: underline;
+}
+
+/* =========================
+   FORMS
+   ========================= */
+
+form {
+    background: var(--card-bg);
+    padding: 25px;
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    max-width: 600px;
+    margin: 20px 0;
+}
+
+label {
+    display: block;
+    margin-top: 12px;
+    font-weight: 600;
+}
+
+input[type="text"],
+input[type="password"],
+input[type="number"],
+input[type="datetime-local"],
+select,
+textarea {
+    width: 100%;
+    padding: 10px;
+    margin-top: 6px;
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius);
+    font-size: 1em;
+    background-color: #fff;
+    transition: var(--transition);
+}
+
+input:focus,
+select:focus,
+textarea:focus {
+    outline: none;
+    border-color: var(--primary-light);
+    box-shadow: 0 0 0 3px rgba(49, 130, 206, 0.2);
+}
+
+textarea {
+    resize: vertical;
+}
+
+/* =========================
+   BUTTONS
+   ========================= */
+
+button,
+input[type="submit"],
+.btn {
+    background-color: var(--primary-color);
+    color: white;
+    border: none;
+    padding: 10px 18px;
+    border-radius: var(--radius);
+    font-size: 1em;
+    cursor: pointer;
+    transition: var(--transition);
+    margin-top: 10px;
+}
+
+button:hover,
+input[type="submit"]:hover,
+.btn:hover {
+    background-color: var(--primary-light);
+}
+
+button[name="type"][value="priority"] {
+    background-color: var(--accent-color);
+}
+
+button[name="type"][value="earliest"] {
+    background-color: var(--success-color);
+}
+
+button[name="type"][value="priority"]:hover,
+button[name="type"][value="earliest"]:hover {
+    opacity: 0.9;
+}
+
+/* =========================
+   LINKS & NAVIGATION
+   ========================= */
+
+a {
+    color: var(--primary-color);
+    text-decoration: none;
+    transition: var(--transition);
+}
+
+a:hover {
+    color: var(--accent-color);
+    text-decoration: underline;
+}
+
+/* =========================
+   CONTAINERS & CARDS
+   ========================= */
+
+ul {
+    list-style: none;
+    background: var(--card-bg);
+    padding: 15px 20px;
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    max-width: 500px;
+    margin-bottom: 20px;
+}
+
+ul li {
+    padding: 6px 0;
+    font-weight: 500;
+}
+
+p {
+    margin-top: 8px;
+}
+
+hr {
+    border: none;
+    height: 1px;
+    background-color: var(--border-color);
+    margin: 20px 0;
+}
+
+/* =========================
+   RESPONSIVE DESIGN
+   ========================= */
+
+@media (max-width: 768px) {
+    body {
+        padding: 10px;
+    }
+
+    table, form {
+        width: 100%;
+        font-size: 0.9em;
+    }
+
+    header nav {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: center;
+    }
+
+    header nav a {
+        margin: 6px 8px;
+    }
+}

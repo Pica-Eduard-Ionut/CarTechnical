@@ -1,0 +1,15 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+<header th:fragment="header">
+    <nav>
+        <a th:href="@{/vehicles}">Vehicles</a> |
+        <a th:href="@{/requests}">Requests</a> |
+        <a th:href="@{/reports}">Reports</a> |
+        <a th:href="@{/mechanic/dashboard}">Dashboard</a> |
+        <a th:href="@{/logout}">Logout</a>
+    </nav>
+    <hr>
+</header>
+</body>
+</html>

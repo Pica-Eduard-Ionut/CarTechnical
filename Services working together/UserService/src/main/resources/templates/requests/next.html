@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head>
+    <link rel="stylesheet" th:href="@{/css/style.css}">
+    <title>Next Scheduled Request</title>
+</head>
+<body>
+<div th:replace="fragments/header :: header"></div>
+
+<h2>Next Scheduled Service Request</h2>
+
+<div th:if="${nextRequest != null}">
+    <p><b>ID:</b> <span th:text="${nextRequest.id}"></span></p>
+    <p><b>Vehicle:</b> <span th:text="${nextRequest.vehicle.make + ' ' + nextRequest.vehicle.model}"></span></p>
+    <p><b>Service Type:</b> <span th:text="${nextRequest.serviceType}"></span></p>
+    <p><b>Priority:</b> <span th:text="${nextRequest.priority}"></span></p>
+    <p><b>Requested From:</b> <span th:text="${nextRequest.requestedFrom}"></span></p>
+    <p><b>Status:</b> <span th:text="${nextRequest.status}"></span></p>
+    <p><b>Assigned Mechanic:</b> <span th:text="${nextRequest.assignedMechanic != null ? nextRequest.assignedMechanic.name : 'N/A'}"></span></p>
+
+    <!-- Only admins can assign mechanics -->
+    <sec:authorize access="hasRole('ADMIN')">
+        <form th:action="@{'/requests/assign/' + ${nextRequest.id}}" method="post">
+            <label>Assign Mechanic:</label>
+            <select name="mechanicId" required>
+                <option th:each="m : ${mechanics}" th:value="${m.id}" th:text="${m.name}"></option>
+            </select>
+            <button type="submit">Assign</button>
+        </form>
+    </sec:authorize>
+</div>
+
+<div th:if="${nextRequest == null}">
+    <p>No pending service requests available.</p>
+</div>
+
+<a th:href="@{/requests}" >Back to Requests</a>
+
+<div th:replace="fragments/footer :: footer"></div>
+</body>
+</html>
