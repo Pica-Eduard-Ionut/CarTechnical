@@ -157,4 +157,39 @@ docker compose down
 ```
 
 
+---
+
+## CI/CD
+
+GitHub Actions workflows live in [.github/workflows](.github/workflows):
+
+- CI: builds and tests all services, then builds/pushes Docker images on `main` ([ci-cd.yml](.github/workflows/ci-cd.yml)).
+- Integration: spins up the full stack with Docker Compose and runs basic health checks ([integration-test.yml](.github/workflows/integration-test.yml)).
+
+### Required Secrets
+
+Set these repository secrets for full CI/CD:
+
+- DOCKER_USERNAME: Docker Hub username
+- DOCKER_PASSWORD: Docker Hub access token/password
+- SMTP_USERNAME: SMTP user for NotificationService integration tests (e.g., Gmail address)
+- SMTP_PASSWORD: SMTP app password
+- DEPLOY_HOST: SSH host for deployment (optional)
+- DEPLOY_USER: SSH user for deployment (optional)
+- DEPLOY_SSH_KEY: Private key for SSH (optional)
+
+Without Docker/Deploy secrets, CI (build + tests) still runs. Docker image push and deploy steps will be skipped.
+
+### Status Badges
+
+You can add badges like:
+
+```
+![CI/CD](https://github.com/<OWNER>/<REPO>/actions/workflows/ci-cd.yml/badge.svg)
+![Integration](https://github.com/<OWNER>/<REPO>/actions/workflows/integration-test.yml/badge.svg)
+```
+
+Replace `<OWNER>` and `<REPO>` with your GitHub org/user and repository name.
+
+
 

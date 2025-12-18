@@ -20,14 +20,18 @@ public class ServiceRequestServiceImpl implements ServiceRequestService {
     private final WebClient webClient;
     private final WebClient notificationWebClient;
     private final ServiceRequestRepository serviceRequestRepository;
+    private final RequestProducer requestProducer;
 
     @Autowired
-    public ServiceRequestServiceImpl(WebClient.Builder webClientBuilder, ServiceRequestRepository serviceRequestRepository) {
+    public ServiceRequestServiceImpl(WebClient.Builder webClientBuilder,
+                                     ServiceRequestRepository serviceRequestRepository,
+                                     RequestProducer requestProducer) {
         String userServiceUrl = System.getenv().getOrDefault("USER_SERVICE_URL", "http://localhost:8081");
         String notificationServiceUrl = System.getenv().getOrDefault("NOTIFICATION_SERVICE_URL", "http://localhost:8083");
-        this.webClient = webClientBuilder.baseUrl(userServiceUrl).build(); // Set base URL for UserService
-        this.notificationWebClient = webClientBuilder.baseUrl(notificationServiceUrl).build(); // Set base URL for NotificationService
+        this.webClient = webClientBuilder.baseUrl(userServiceUrl).build();
+        this.notificationWebClient = webClientBuilder.baseUrl(notificationServiceUrl).build();
         this.serviceRequestRepository = serviceRequestRepository;
+        this.requestProducer = requestProducer;
     }
 
     @Override
@@ -121,75 +125,37 @@ public class ServiceRequestServiceImpl implements ServiceRequestService {
      */
     private void notifyRequestCreated(ServiceRequest request, Object ownerData) {
         try {
-            // Extract owner information from the ownerData object
-            String ownerEmail = null;
-            String ownerName = null;
-            
-            if (ownerData != null) {
-                // Try to extract from Map-like structure
-                try {
-                    if (ownerData instanceof java.util.Map) {
-                        java.util.Map<?, ?> ownerMap = (java.util.Map<?, ?>) ownerData;
-                        ownerEmail = (String) ownerMap.get("email");
-                        ownerName = (String) ownerMap.get("name");
-                    }
-                } catch (Exception e) {
-                    // If extraction fails, fetch from UserService
-                }
-            }
-            
-            // If we don't have owner info, fetch it from UserService
-            if (ownerEmail == null || ownerName == null) {
-                try {
-                    Object owner = webClient.get()
-                            .uri("/users/" + request.getOwnerId())
-                            .retrieve()
-                            .bodyToMono(Object.class)
-                            .block();
-                    if (owner instanceof java.util.Map) {
-                        java.util.Map<?, ?> ownerMap = (java.util.Map<?, ?>) owner;
-                        ownerEmail = (String) ownerMap.get("email");
-                        ownerName = (String) ownerMap.get("name");
-                    }
-                } catch (Exception e) {
-                    // Log but don't fail the request creation
-                    System.err.println("Failed to fetch owner info for notification: " + e.getMessage());
-                }
-            }
-            
             // Prepare notification payload
-            java.util.Map<String, Object> notificationPayload = new java.util.HashMap<>();
+            Map<String, Object> notificationPayload = new HashMap<>();
             notificationPayload.put("requestId", request.getId());
             notificationPayload.put("ownerId", request.getOwnerId());
-            if (ownerEmail != null) notificationPayload.put("ownerEmail", ownerEmail);
-            if (ownerName != null) notificationPayload.put("ownerName", ownerName);
+            notificationPayload.put("eventType", "request-created");
+            
+            // Extract owner email and name from ownerData
+            if (ownerData instanceof Map) {
+                Map<?, ?> ownerMap = (Map<?, ?>) ownerData;
+                Object email = ownerMap.get("email");
+                Object name = ownerMap.get("name");
+                if (email != null) notificationPayload.put("ownerEmail", email.toString());
+                if (name != null) notificationPayload.put("ownerName", name.toString());
+            }
             notificationPayload.put("status", request.getStatus() != null ? request.getStatus().name() : "PENDING");
             notificationPayload.put("serviceType", request.getServiceType() != null ? request.getServiceType().name() : "N/A");
             notificationPayload.put("priority", request.getPriority() != null ? request.getPriority().name() : "N/A");
-            if (request.getRequestedFrom() != null) {
-                notificationPayload.put("requestedFrom", request.getRequestedFrom().toString());
-            }
-            if (request.getRequestedTo() != null) {
-                notificationPayload.put("requestedTo", request.getRequestedTo().toString());
-            }
-            
-            // Send notification asynchronously (fire and forget)
-            notificationWebClient.post()
-                    .uri("/notifications/request-created")
-                    .contentType(MediaType.APPLICATION_JSON)
-                    .bodyValue(notificationPayload)
-                    .retrieve()
-                    .bodyToMono(String.class)
-                    .subscribe(
-                            result -> System.out.println("Notification sent successfully for request " + request.getId()),
-                            error -> System.err.println("Failed to send notification: " + error.getMessage())
-                    );
+
+            // Convert to JSON string
+            String message = new com.fasterxml.jackson.databind.ObjectMapper().writeValueAsString(notificationPayload);
+
+            // Send via RabbitMQ
+            requestProducer.sendRequestNotification(message);
+
+            System.out.println("Request message sent to RabbitMQ for request " + request.getId());
         } catch (Exception e) {
-            // Log but don't fail the request creation if notification fails
-            System.err.println("Error sending notification: " + e.getMessage());
+            System.err.println("Failed to send request notification: " + e.getMessage());
         }
     }
-    
+
+
     /**
      * Notify NotificationService when a service request is updated
      */
@@ -206,37 +172,36 @@ public class ServiceRequestServiceImpl implements ServiceRequestService {
             } catch (Exception e) {
                 System.err.println("Failed to fetch owner info for notification: " + e.getMessage());
             }
-            
+
             String ownerEmail = null;
             String ownerName = null;
-            if (owner instanceof java.util.Map) {
-                java.util.Map<?, ?> ownerMap = (java.util.Map<?, ?>) owner;
-                ownerEmail = (String) ownerMap.get("email");
-                ownerName = (String) ownerMap.get("name");
+            if (owner instanceof Map) {
+                Map<?, ?> ownerMap = (Map<?, ?>) owner;
+                Object email = ownerMap.get("email");
+                Object name = ownerMap.get("name");
+                if (email != null) ownerEmail = email.toString();
+                if (name != null) ownerName = name.toString();
             }
-            
+
             // Prepare notification payload
             Map<String, Object> notificationPayload = new HashMap<>();
             notificationPayload.put("requestId", request.getId());
             notificationPayload.put("ownerId", request.getOwnerId());
+            notificationPayload.put("eventType", "request-updated");
             if (ownerEmail != null) notificationPayload.put("ownerEmail", ownerEmail);
             if (ownerName != null) notificationPayload.put("ownerName", ownerName);
             notificationPayload.put("newStatus", request.getStatus() != null ? request.getStatus().name() : "PENDING");
-            
-            // Send notification asynchronously (fire and forget)
-            notificationWebClient.post()
-                    .uri("/notifications/status-changed")
-                    .contentType(MediaType.APPLICATION_JSON)
-                    .bodyValue(notificationPayload)
-                    .retrieve()
-                    .bodyToMono(String.class)
-                    .subscribe(
-                            result -> System.out.println("Status change notification sent for request " + request.getId()),
-                            error -> System.err.println("Failed to send status change notification: " + error.getMessage())
-                    );
+
+            // Convert payload to JSON
+            String message = new com.fasterxml.jackson.databind.ObjectMapper()
+                    .writeValueAsString(notificationPayload);
+
+            // Send via RabbitMQ
+            requestProducer.sendRequestNotification(message);
+
+            System.out.println("Status update message sent to RabbitMQ for request " + request.getId());
         } catch (Exception e) {
-            // Log but don't fail the request update if notification fails
-            System.err.println("Error sending status change notification: " + e.getMessage());
+            System.err.println("Failed to send status update notification: " + e.getMessage());
         }
     }
 }
