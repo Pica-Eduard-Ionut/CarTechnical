@@ -15,6 +15,19 @@ jobs:
   test-user-service:
     runs-on: ubuntu-latest
     name: Test UserService
+    services:
+      mariadb:
+        image: mariadb:10.11
+        env:
+          MYSQL_ROOT_PASSWORD: root
+          MYSQL_DATABASE: userservice
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -proot --silent"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=10
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -30,10 +43,22 @@ jobs:
         working-directory: ./Services working together/UserService
         run: chmod +x mvnw || true
 
+      - name: Wait for MariaDB
+        run: |
+          for i in {1..60}; do
+            nc -z 127.0.0.1 3306 && echo "DB ready" && exit 0
+            sleep 2
+          done
+          echo "DB not ready in time" && exit 1
+
       - name: Run tests
         working-directory: ./Services working together/UserService
+        env:
+          SPRING_DATASOURCE_URL: jdbc:mariadb://127.0.0.1:3306/userservice
+          SPRING_DATASOURCE_USERNAME: root
+          SPRING_DATASOURCE_PASSWORD: root
         run: |
-          if [ -x ./mvnw ]; then ./mvnw -B -ntp test -DexcludeTests="**/*ApplicationTests.java" -DfailIfNoTests=false; else mvn -B -ntp test -DexcludeTests="**/*ApplicationTests.java" -DfailIfNoTests=false; fi
+          if [ -x ./mvnw ]; then ./mvnw -B -ntp test -DfailIfNoTests=false; else mvn -B -ntp test -DfailIfNoTests=false; fi
 
       - name: Generate test report
         if: ${{ always() && hashFiles('Services working together/UserService/target/surefire-reports/*.xml') != '' }}
@@ -47,6 +72,19 @@ jobs:
   test-request-service:
     runs-on: ubuntu-latest
     name: Test RequestService
+    services:
+      mariadb:
+        image: mariadb:10.11
+        env:
+          MYSQL_ROOT_PASSWORD: root
+          MYSQL_DATABASE: requestservice
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -proot --silent"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=10
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -62,10 +100,22 @@ jobs:
         working-directory: ./Services working together/RequestService
         run: chmod +x mvnw || true
 
+      - name: Wait for MariaDB
+        run: |
+          for i in {1..60}; do
+            nc -z 127.0.0.1 3306 && echo "DB ready" && exit 0
+            sleep 2
+          done
+          echo "DB not ready in time" && exit 1
+
       - name: Run tests
         working-directory: ./Services working together/RequestService
+        env:
+          SPRING_DATASOURCE_URL: jdbc:mariadb://127.0.0.1:3306/requestservice
+          SPRING_DATASOURCE_USERNAME: root
+          SPRING_DATASOURCE_PASSWORD: root
         run: |
-          if [ -x ./mvnw ]; then ./mvnw -B -ntp test -DexcludeTests="**/*ApplicationTests.java" -DfailIfNoTests=false; else mvn -B -ntp test -DexcludeTests="**/*ApplicationTests.java" -DfailIfNoTests=false; fi
+          if [ -x ./mvnw ]; then ./mvnw -B -ntp test -DfailIfNoTests=false; else mvn -B -ntp test -DfailIfNoTests=false; fi
 
       - name: Generate test report
         if: ${{ always() && hashFiles('Services working together/RequestService/target/surefire-reports/*.xml') != '' }}
