@@ -1,195 +1,143 @@
+
 ## Project Overview
+This project implements a **microservices-based system** for managing vehicle service requests and user notifications.  
+The system demonstrates **asynchronous communication using RabbitMQ**, **service decoupling**, and a **fully automated CI/CD pipeline** using GitHub Actions.
 
-This repository implements a **microservices-based car service management system** for a university project.  
-The system is split into **three independent services**:
-
-- **UserService (Java / Spring Boot, port 8081)** – manages users and vehicles.
-- **RequestService (Java / Spring Boot, port 8082)** – manages service requests, scheduling, and service reports.
-- **NotificationService (Python / Flask, port 8083)** – sends email notifications and reminders and stores notification history.
-
-Each service has its **own database** (MariaDB) and communicates with the others via **HTTP REST**. A `docker-compose.yml` file in `Services working together/` runs the whole system.
-
----
-
-## Architecture & Microservices
-
-### Services & Responsibilities
-
-- **UserService**
-  - **Responsibility**: Manage **users** (owners, mechanics, admins) and their **vehicles**.
-  - **Database**: `userservice` (via `user-db` container).
-  - **Main endpoints**:
-    - **POST `/users`** – create user.
-    - **GET `/users/{id}`** – get user by ID.
-    - **POST `/vehicles`** – create vehicle for an owner.
-    - **GET `/vehicles/{id}`** – get vehicle by ID.
-
-- **RequestService**
-  - **Responsibility**: Manage **service requests**, **mechanic assignment**, **scheduling**, and **service reports**.
-  - **Database**: `requestservice` (via `request-db` container).
-  - **Main endpoints**:
-    - **POST `/service-requests`** – create service request (validates owner & vehicle with UserService, then notifies NotificationService).
-    - **GET `/service-requests/{id}`** – get request by ID.
-    - **GET `/service-requests/vehicle/{vehicleId}`** – requests for a vehicle.
-    - **GET `/service-requests/status/{status}`** – requests by status (PENDING, CONFIRMED, SCHEDULED, etc.).
-    - **PUT `/service-requests/{id}/assign-mechanic`** – assign mechanic to a request and notify NotificationService.
-    - **POST `/service-requests/schedule/earliest`** – schedule next request by earliest date.
-    - **POST `/service-requests/schedule/priority`** – schedule next request by priority.
-    - **POST `/service-reports`** – create service report and mark request as COMPLETED, then notify NotificationService.
-
-- **NotificationService**
-  - **Responsibility**: Send **email notifications** and **reminder emails**, track notification history and reminder stats.
-  - **Database**: `notificationservice` (via `notification-db` container).
-  - **Main endpoints**:
-    - **GET `/health`** – health check.
-    - **GET `/config/check`** – show SMTP configuration status (no secrets).
-    - **POST `/notifications/request-created`** – email when a service request is created. Can fetch extra data from:
-      - UserService: `GET /users/{ownerId}`
-      - RequestService: `GET /service-requests/{requestId}`
-    - **POST `/notifications/request-updated`** – email with details when a request is completed/updated.
-    - **POST `/notifications/status-changed`** – email when request status changes.
-    - **POST `/reminders/process`** – manually trigger reminder processing (24h before appointment).
-    - **GET `/reminders/stats`** – reminder statistics.
-    - **GET `/notifications/history`** – list notification history with optional filters (`limit`, `type`, `request_id`, `user_id`).
-
-### Inter-service Communication
-
-- **RequestService → UserService**
-  - Validates owners and vehicles before creating service requests:
-    - `GET /vehicles/{vehicleId}`
-    - `GET /users/{ownerId}`
-
-- **RequestService → NotificationService**
-  - After creating a request: `POST /notifications/request-created`.
-  - After assigning a mechanic: `POST /notifications/status-changed`.
-  - After creating a report (COMPLETED): `POST /notifications/request-updated`.
-
-- **NotificationService → UserService / RequestService**
-  - For notifications and reminders:
-    - `GET /users/{ownerId}`
-    - `GET /service-requests/{requestId}`
-    - `GET /service-requests/status/{status}` (to find upcoming appointments).
-
-All communication is **HTTP REST**, using Spring WebFlux `WebClient` in Java services and the `requests` library in Python.
+The architecture follows modern microservices best practices:
+- Independent services
+- Database per service
+- Event-driven communication
+- Containerized deployment
 
 ---
 
-## Technologies Used
+## Architecture Overview
 
-- **UserService & RequestService**
-  - Java 17, Spring Boot 3.5.6
-  - Spring Web, Spring Data JPA, Spring WebFlux (`WebClient`)
-  - MariaDB driver, Thymeleaf (for UI pages)
+### Microservices
+| Service | Technology | Description |
+|------|-----------|-------------|
+| **User Service** | Java | Manages user data |
+| **Request Service** | Java | Handles vehicle service requests and publishes events |
+| **Notification Service** | Python | Consumes events and sends notifications |
+| **RabbitMQ** | Message Broker | Asynchronous event delivery |
+| **MariaDB** | Database | Separate database per service |
 
-- **NotificationService**
-  - Python, Flask, Flask-CORS
-  - APScheduler (background reminders), `requests`, `pymysql`, `python-dotenv`
-
-- **Databases**
-  - MariaDB instances:
-    - `user-db` → `userservice`
-    - `request-db` → `requestservice`
-    - `notification-db` → `notificationservice`
-
-- **Docker**
-  - One `Dockerfile` per service.
-  - `docker-compose.yml` in `Services working together/` orchestrates all services and databases.
+Each service is **independently deployable** and communicates either via HTTP or events.
 
 ---
 
-## Running the System with Docker
+## Message Queue Integration (RabbitMQ)
 
-### Prerequisites
+### Why RabbitMQ?
+RabbitMQ is used to enable **asynchronous, event-driven communication** between the Request Service and the Notification Service.
 
-- **Docker** and **Docker Compose** installed.
-- Internet access to pull base images.
-
-> You do **not** need local Java or Python when using Docker.
-
-### 1. Navigate to the compose folder
-
-From the project root:
-
-```bash
-cd "Services working together"
-```
-
-### 2. Configure NotificationService SMTP
-
-Create `NotificationService/.env` (if it does not exist) with at least:
-
-```env
-SMTP_HOST=smtp.gmail.com
-SMTP_PORT=587
-SMTP_USERNAME=your_email@gmail.com
-SMTP_PASSWORD=your_app_password
-SMTP_USE_TLS=true
-SMTP_USE_SSL=false
-FROM_EMAIL=your_email@gmail.com
-```
-
-You can also override DB and service URLs if needed, but Docker provides defaults via environment variables.
-
-### 3. Build and run all services
-
-From `Services working together/`:
-
-```bash
-docker compose up --build
-```
-
-Or in detached mode:
-
-```bash
-docker compose up --build -d
-```
-
-After startup:
-
-- UserService: `http://localhost:8081`
-- RequestService: `http://localhost:8082`
-- NotificationService: `http://localhost:8083`
-
-To stop everything:
-
-```bash
-docker compose down
-```
-
+This avoids tight coupling and allows services to scale and fail independently.
 
 ---
 
-## CI/CD
+## Event Flow
 
-GitHub Actions workflows live in [.github/workflows](.github/workflows):
+### 1. Event Producer – Request Service (Java)
 
-- CI: builds and tests all services, then builds/pushes Docker images on `main` ([ci-cd.yml](.github/workflows/ci-cd.yml)).
-- Integration: spins up the full stack with Docker Compose and runs basic health checks ([integration-test.yml](.github/workflows/integration-test.yml)).
+The `ServiceRequestServiceImpl` publishes events to RabbitMQ when:
+- A **service request is created**
+- A **service request is updated** (e.g. mechanic assigned)
 
-### Required Secrets
-
-Set these repository secrets for full CI/CD:
-
-- DOCKER_USERNAME: Docker Hub username
-- DOCKER_PASSWORD: Docker Hub access token/password
-- SMTP_USERNAME: SMTP user for NotificationService integration tests (e.g., Gmail address)
-- SMTP_PASSWORD: SMTP app password
-- DEPLOY_HOST: SSH host for deployment (optional)
-- DEPLOY_USER: SSH user for deployment (optional)
-- DEPLOY_SSH_KEY: Private key for SSH (optional)
-
-Without Docker/Deploy secrets, CI (build + tests) still runs. Docker image push and deploy steps will be skipped.
-
-### Status Badges
-
-You can add badges like:
-
+#### Example: Event Published on Request Creation
+```java
+requestProducer.sendRequestNotification(message);
+{
+  "requestId": 12,
+  "ownerId": 5,
+  "ownerEmail": "user@example.com",
+  "ownerName": "John Doe",
+  "status": "PENDING",
+  "serviceType": "REPAIR",
+  "priority": "HIGH"
+}
 ```
-![CI/CD](https://github.com/<OWNER>/<REPO>/actions/workflows/ci-cd.yml/badge.svg)
-![Integration](https://github.com/<OWNER>/<REPO>/actions/workflows/integration-test.yml/badge.svg)
+### 2. Event Consumer – Notification Service (Python)
+
+The `Notification Service`:
+
+- Subscribes to the RabbitMQ queue
+- Consumes messages asynchronously
+- Sends email or system notifications based on the event
+  
+If the Notification Service is unavailable:
+- Messages remain safely in RabbitMQ
+- Processing resumes once the service is back online
+  
+| Benefit| Explanation|
+| --------------------------- | ------------------------- |
+| **Decoupling**              | Request Service never directly calls Notification Service |
+| **Scalability**             | Multiple consumers can be added                           |
+| **Fault Tolerance**         | Messages are not lost if a service crashes                |
+| **Asynchronous Processing** | User requests are processed faster                        |
+
+
+# Docker & Containerization
+
+Each service runs in its own container:
+- Independent Dockerfiles
+- Shared Docker Compose network
+- Separate volumes for databases
+  
+| Service              | URL                                              |
+| -------------------- | ------------------------------------------------ |
+| User Service         | [http://localhost:8081](http://localhost:8081)   |
+| Request Service      | [http://localhost:8082](http://localhost:8082)   |
+| Notification Service | [http://localhost:8083](http://localhost:8083)   |
+| RabbitMQ UI          | [http://localhost:15672](http://localhost:15672) |
+
+
+### RabbitMQ Credentials:
+```bash
+username: guest
+password: guest
 ```
 
-Replace `<OWNER>` and `<REPO>` with your GitHub org/user and repository name.
+# CI/CD Pipeline (GitHub Actions)
+### Overview
 
+The project uses GitHub Actions to automatically:
+- Build
+- Test
+- Package
+- Deploy the microservices
 
+The pipeline runs on:
+- Push to `main` or `develop`
+- Pull requests
 
+# CI Pipeline Stages
+
+### Unit Testing
+- Java services tested using JUnit
+- Python service tested using Pytest
+- MariaDB containers spun up for isolated testing
+  
+
+### Docker Image Build
+
+- Builds Docker images for:
+  - User Service
+  - Request Service
+  - Notification Service
+- Images are pushed to Docker Hub
+
+### Integration Testing (Docker Compose)
+
+- Entire system is started using Docker Compose
+- Includes:
+  - All services
+  - RabbitMQ
+  - Databases
+- Health checks ensure services are running correctly
+
+### Deployment
+- Latest images are pulled
+- Containers are restarted
+- Old containers and unused images are removed
+  
+This results in automatic deployment on every push to `main`.
